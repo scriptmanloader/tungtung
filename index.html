@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CurGui - Библиотека на PyPi</title>
+    <style>
+        :root {
+            --bg-color: #0f0f11;
+            --text-color: #ffffff;
+            --accent-color: #3b82f6;
+            --font-main: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            font-family: var(--font-main);
+            height: 100vh;
+            width: 100vw;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+        }
+
+        /* --- ПРЕЛОАДЕР --- */
+        #preloader {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: #1a1a1a; 
+            z-index: 9999;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: #ffffff;
+            font-size: 1.5rem;
+            font-weight: 500;
+            transition: opacity 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        /* Фоновый Canvas */
+        #canvas-bg {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+        }
+
+        /* Основной контент */
+        .content {
+            z-index: 2;
+            text-align: center;
+            position: relative;
+            padding: 4rem 2rem;
+        }
+
+        /* Главный заголовок */
+        h1 {
+            font-size: 6rem;
+            font-weight: 800;
+            letter-spacing: -3px;
+            margin-bottom: 1.5rem;
+            background: linear-gradient(135deg, #ffffff 0%, #60a5fa 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            opacity: 0;
+            animation: fadeInDown 1.5s ease-out forwards;
+            animation-play-state: paused; 
+            cursor: default;
+        }
+
+        /* Контейнер подзаголовка */
+        .subtitle-wrapper {
+            min-height: 5rem;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: visible;
+        }
+
+        .subtitle {
+            font-size: 1.75rem;
+            font-weight: 300;
+            color: rgba(255, 255, 255, 0.8);
+            opacity: 0;
+            transform: translateY(20px);
+            transition: opacity 0.8s ease, transform 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+            display: inline-block;
+            white-space: nowrap;
+        }
+
+        .subtitle.active {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .subtitle.fade-out {
+            opacity: 0;
+            transform: translateY(-20px);
+        }
+
+        /* Стиль для команды pip */
+        .code-style {
+            font-family: 'JetBrains Mono', 'Fira Code', 'Courier New', monospace;
+            background: rgba(59, 130, 246, 0.15);
+            padding: 8px 20px;
+            border-radius: 12px;
+            color: #60a5fa;
+            border: 1px solid rgba(96, 165, 250, 0.3);
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+            display: inline-block;
+        }
+
+        @keyframes fadeInDown {
+            from {
+                opacity: 0;
+                transform: translateY(-40px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @media (max-width: 768px) {
+            h1 { font-size: 3.5rem; }
+            .subtitle { font-size: 1.2rem; }
+            .code-style { padding: 6px 15px; }
+        }
+    </style>
+</head>
+<body>
+
+    <div id="preloader">
+        Тестирование WebWindows из CurGui
+    </div>
+
+    <canvas id="canvas-bg"></canvas>
+
+    <div class="content">
+        <h1 id="main-title">CurGui</h1>
+        <div class="subtitle-wrapper">
+            <span id="subtitle-text" class="subtitle">Библиотека на PyPi</span>
+        </div>
+    </div>
+
+    <script>
+        /**
+         * КЛАССЫ АНИМАЦИИ
+         */
+        class Orb {
+            constructor(w, h) {
+                this.w = w;
+                this.h = h;
+                this.init();
+            }
+            init() {
+                this.x = Math.random() * this.w;
+                this.y = Math.random() * this.h;
+                this.radius = Math.random() * 200 + 100;
+                this.vx = (Math.random() - 0.5) * 0.3;
+                this.vy = (Math.random() - 0.5) * 0.3;
+                this.alpha = 0;
+                this.maxAlpha = Math.random() * 0.12;
+            }
+            update() {
+                this.x += this.vx;
+                this.y += this.vy;
+                if (this.alpha < this.maxAlpha) this.alpha += 0.001;
+                if (this.x < -this.radius || this.x > this.w + this.radius) this.vx *= -1;
+                if (this.y < -this.radius || this.y > this.h + this.radius) this.vy *= -1;
+            }
+            draw(ctx) {
+                const gradient = ctx.createRadialGradient(this.x, this.y, 0, this.x, this.y, this.radius);
+                gradient.addColorStop(0, `rgba(59, 130, 246, ${this.alpha})`);
+                gradient.addColorStop(1, 'rgba(15, 15, 17, 0)');
+                ctx.fillStyle = gradient;
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+
+        class Particle {
+            constructor(w, h) {
+                this.w = w;
+                this.h = h;
+                this.x = Math.random() * w;
+                this.y = Math.random() * h;
+                this.vx = (Math.random() - 0.5) * 0.6;
+                this.vy = (Math.random() - 0.5) * 0.6;
+                this.size = Math.random() * 2 + 1;
+            }
+            update(mouse) {
+                this.x += this.vx;
+                this.y += this.vy;
+                if (this.x < 0 || this.x > this.w) this.vx *= -1;
+                if (this.y < 0 || this.y > this.h) this.vy *= -1;
+
+                if (mouse.x != null) {
+                    let dx = mouse.x - this.x;
+                    let dy = mouse.y - this.y;
+                    let dist = Math.sqrt(dx*dx + dy*dy);
+                    if (dist < 180) {
+                        this.x -= (dx / dist) * 0.5;
+                        this.y -= (dy / dist) * 0.5;
+                    }
+                }
+            }
+            draw(ctx) {
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.4)';
+                ctx.fill();
+            }
+        }
+
+        const preloader = document.getElementById('preloader');
+        const mainTitle = document.getElementById('main-title');
+        const subtitleElement = document.getElementById('subtitle-text');
+
+        // Таймер заставки
+        setTimeout(() => {
+            preloader.style.opacity = '0';
+            setTimeout(() => {
+                preloader.style.display = 'none';
+                startSiteAnimations();
+            }, 600);
+        }, 3000);
+
+        function startSiteAnimations() {
+            mainTitle.style.animationPlayState = 'running';
+            setTimeout(() => {
+                subtitleElement.classList.add('active');
+            }, 600);
+
+            setInterval(changeText, 3500);
+            initParticles();
+            animate();
+        }
+
+        // Список фраз: только команда установки и "Библиотека на PyPi" на разных языках
+        const phrases = [
+            "Библиотека на PyPi",
+            "pip install curgui",
+            "Library on PyPi",
+            "Bibliothèque sur PyPi",
+            "Bibliothek auf PyPi",
+            "Biblioteca en PyPi",
+            "PyPi 上的库",
+            "PyPiのライブラリ",
+            "Библиотека на PyPi",
+            "pip install curgui"
+        ];
+
+        let currentIndex = 0;
+
+        function changeText() {
+            subtitleElement.classList.remove('active');
+            subtitleElement.classList.add('fade-out');
+
+            setTimeout(() => {
+                currentIndex = (currentIndex + 1) % phrases.length;
+                const text = phrases[currentIndex];
+                
+                if (text.includes("pip install")) {
+                    subtitleElement.innerHTML = `<span class="code-style">${text}</span>`;
+                } else {
+                    subtitleElement.textContent = text;
+                }
+
+                subtitleElement.classList.remove('fade-out');
+                void subtitleElement.offsetWidth; 
+                subtitleElement.classList.add('active');
+            }, 800);
+        }
+
+        /**
+         * ЛОГИКА CANVAS
+         */
+        const canvas = document.getElementById('canvas-bg');
+        const ctx = canvas.getContext('2d');
+        let width, height, particles = [], orbs = [];
+        
+        const particleCount = window.innerWidth < 768 ? 40 : 100;
+        const orbCount = 6; 
+        const connectionDistance = 160;
+        let mouse = { x: null, y: null };
+
+        window.addEventListener('mousemove', e => { mouse.x = e.x; mouse.y = e.y; });
+        window.addEventListener('mouseleave', () => { mouse.x = null; mouse.y = null; });
+
+        function resize() {
+            width = canvas.width = window.innerWidth;
+            height = canvas.height = window.innerHeight;
+            if (particles.length > 0) initParticles();
+        }
+        
+        window.addEventListener('resize', resize);
+
+        function initParticles() {
+            particles = [];
+            orbs = [];
+            for (let i = 0; i < particleCount; i++) particles.push(new Particle(width, height));
+            for (let i = 0; i < orbCount; i++) orbs.push(new Orb(width, height));
+        }
+
+        function animate() {
+            ctx.fillStyle = '#0f0f11';
+            ctx.fillRect(0, 0, width, height);
+
+            orbs.forEach(orb => { orb.update(); orb.draw(ctx); });
+
+            for (let i = 0; i < particles.length; i++) {
+                particles[i].update(mouse);
+                particles[i].draw(ctx);
+                for (let j = i + 1; j < particles.length; j++) {
+                    let dx = particles[i].x - particles[j].x;
+                    let dy = particles[i].y - particles[j].y;
+                    let dist = Math.sqrt(dx*dx + dy*dy);
+                    if (dist < connectionDistance) {
+                        ctx.beginPath();
+                        ctx.strokeStyle = `rgba(96, 165, 250, ${(1 - dist/connectionDistance) * 0.3})`;
+                        ctx.lineWidth = 0.8;
+                        ctx.moveTo(particles[i].x, particles[i].y);
+                        ctx.lineTo(particles[j].x, particles[j].y);
+                        ctx.stroke();
+                    }
+                }
+            }
+            requestAnimationFrame(animate);
+        }
+
+        resize();
+    </script>
+</body>
+</html>
